@@ -2,6 +2,9 @@ local isMenuOpen = false
 local isDataLoading = false
 local menuCam = nil
 local menuIntroCam = nil
+local currentRecoilAmplitude = 1.0
+local lastRecoilWeapon = 0
+local lastAppliedRecoilAmplitude = -1.0
 
 local HAND_BONES = {
     left = 18905,
@@ -100,7 +103,8 @@ local function shouldSyncBonuses()
     local combatEnabled = Config.Combat and Config.Combat.Enabled
     local movementEnabled = Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled
     local drivingEnabled = Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled
-    return combatEnabled or movementEnabled or drivingEnabled
+    local underwaterEnabled = Config.Native and Config.Native.Underwater and Config.Native.Underwater.Enabled
+    return combatEnabled or movementEnabled or drivingEnabled or underwaterEnabled
 end
 
 local function setMenuState(state)
@@ -214,23 +218,38 @@ RegisterNetEvent('horizon_skill_tree:client:applyCombat', function(mods)
     if Config.Combat and Config.Combat.Enabled then
         local weaponBonus = (mods and tonumber(mods.weapon)) or 0.0
         local meleeBonus = (mods and tonumber(mods.melee)) or 0.0
+        local recoilReduction = (mods and tonumber(mods.recoilReduction)) or 0.0
 
         local weaponModifier = 1.0 + math.max(0.0, weaponBonus)
         local meleeModifier = 1.0 + math.max(0.0, meleeBonus)
 
         SetPlayerWeaponDamageModifier(PlayerId(), weaponModifier)
         SetPlayerMeleeWeaponDamageModifier(PlayerId(), meleeModifier)
+        currentRecoilAmplitude = math.max(0.2, 1.0 - math.max(0.0, recoilReduction))
     else
         SetPlayerWeaponDamageModifier(PlayerId(), 1.0)
         SetPlayerMeleeWeaponDamageModifier(PlayerId(), 1.0)
+        currentRecoilAmplitude = 1.0
     end
 
     if Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled then
         local sprintBonus = (mods and tonumber(mods.sprintBonus)) or 0.0
+        local staminaBonus = (mods and tonumber(mods.staminaBonus)) or 0.0
         local sprintModifier = math.min(1.0 + math.max(0.0, sprintBonus), 1.49)
+        local staminaModifier = math.max(1.0, 1.0 + math.max(0.0, staminaBonus))
         SetRunSprintMultiplierForPlayer(PlayerId(), sprintModifier)
+        SetPlayerMaxStamina(PlayerId(), staminaModifier)
     else
         SetRunSprintMultiplierForPlayer(PlayerId(), 1.0)
+        SetPlayerMaxStamina(PlayerId(), 1.0)
+    end
+
+    if Config.Native and Config.Native.Underwater and Config.Native.Underwater.Enabled then
+        local baseMaxTime = tonumber(Config.Native.Underwater.BaseMaxTime) or 10.0
+        local underwaterTimeBonus = (mods and tonumber(mods.underwaterTimeBonus)) or 0.0
+        SetPedMaxTimeUnderwater(PlayerPedId(), math.max(0.0, baseMaxTime + math.max(0.0, underwaterTimeBonus)))
+    else
+        SetPedMaxTimeUnderwater(PlayerPedId(), 10.0)
     end
 
     if Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled then
@@ -239,6 +258,27 @@ RegisterNetEvent('horizon_skill_tree:client:applyCombat', function(mods)
         SetPlayerVehicleDamageModifier(PlayerId(), damageModifier)
     else
         SetPlayerVehicleDamageModifier(PlayerId(), 1.0)
+    end
+end)
+
+CreateThread(function()
+    while true do
+        local ped = PlayerPedId()
+        if ped and ped > 0 and DoesEntityExist(ped) then
+            local weapon = GetSelectedPedWeapon(ped)
+            if weapon and weapon ~= 0 and weapon ~= `WEAPON_UNARMED` then
+                local amplitudeChanged = math.abs(lastAppliedRecoilAmplitude - currentRecoilAmplitude) > 0.001
+                if weapon ~= lastRecoilWeapon or amplitudeChanged then
+                    SetWeaponRecoilShakeAmplitude(weapon, currentRecoilAmplitude)
+                    lastRecoilWeapon = weapon
+                    lastAppliedRecoilAmplitude = currentRecoilAmplitude
+                end
+            else
+                lastRecoilWeapon = 0
+            end
+        end
+
+        Wait(200)
     end
 end)
 

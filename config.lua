@@ -36,6 +36,7 @@ Config.Combat = {
     Enabled = true,
     MaxWeaponBonus = 0.05, -- max +5%
     MaxMeleeBonus = 0.08,  -- max +8%
+    MaxRecoilReduction = 0.35, -- max 35% mniej odrzutu
     ReapplyOnSpawn = true
 }
 
@@ -43,7 +44,13 @@ Config.Combat = {
 Config.Native = {
     Movement = {
         Enabled = true,
-        MaxSprintBonus = 0.25 -- bazowo 1.0, maks 1.25
+        MaxSprintBonus = 0.05, -- bazowo 1.0, maks 1.05
+        MaxStaminaBonus = 0.25 -- bazowo 1.0, maks 1.25
+    },
+    Underwater = {
+        Enabled = true,
+        BaseMaxTime = 10.0, -- domyślny czas pod wodą
+        MaxTimeBonus = 25.0 -- dodatkowe sekundy z drzewka
     },
     Driving = {
         Enabled = true,
@@ -95,189 +102,213 @@ Config.Leveling = {
 
 -- Definicja umiejętności (łatwa rozbudowa)
 Config.Skills = {
-    fishing_1 = {
-        id = 'fishing_1',
-        name = 'Wędkarz I',
-        description = '+10% szans na lepszą rybę.',
+    strength_1 = {
+        id = 'strength_1',
+        name = 'Siła',
+        description = 'Podstawowe rozwinięcie siły.',
         cost = 1,
         requirement = nil,
-        x = 18,
-        y = 60,
-        color = '#9d4edd',
-        category = 'gathering',
-        effects = {
-            fishing = {
-                rareChanceMultiplier = 1.10,
-                xpMultiplier = 1.05
-            }
-        }
+        x = 48,
+        y = 58,
+        color = '#3a86ff',
+        category = 'strength'
     },
-    fishing_2 = {
-        id = 'fishing_2',
-        name = 'Wędkarz II',
-        description = '+20% szans na rzadką rybę.',
+    melee_1 = {
+        id = 'melee_1',
+        name = 'Rozwinięcie na wręcz',
+        description = 'Większe obrażenia w walce wręcz.',
         cost = 2,
-        requirement = 'fishing_1',
-        x = 35,
-        y = 45,
-        color = '#9d4edd',
-        category = 'gathering',
+        requirement = 'strength_1',
+        x = 62,
+        y = 44,
+        color = '#3a86ff',
+        category = 'combat',
         effects = {
-            fishing = {
-                rareChanceMultiplier = 1.20,
-                xpMultiplier = 1.10
+            combat = {
+                meleeDamage = 0.06
             }
         }
     },
-    combat_1 = {
-        id = 'combat_1',
-        name = 'Taktyk I',
-        description = 'Lepsza kontrola walki.',
-        cost = 1,
-        requirement = nil,
-        x = 50,
+    recoil_1 = {
+        id = 'recoil_1',
+        name = 'Odrzut broni',
+        description = 'Mniejszy odrzut podczas strzelania.',
+        cost = 2,
+        requirement = 'strength_1',
+        x = 62,
         y = 70,
-        color = '#3a86ff',
+        color = '#5f6cff',
         category = 'combat',
         effects = {
             combat = {
-                weaponDamage = 0.02,
-                meleeDamage = 0.04
+                recoilReduction = 0.12
             }
-        },
-        triggers = {
-            server = 'horizon_skill_tree:combat:unlocked',
-            client = 'horizon_skill_tree:combat:unlockedClient'
         }
     },
-    combat_2 = {
-        id = 'combat_2',
-        name = 'Taktyk II',
-        description = 'Zaawansowana skuteczność bojowa.',
-        cost = 2,
-        requirement = 'combat_1',
-        x = 65,
-        y = 52,
-        color = '#3a86ff',
-        category = 'combat',
-        effects = {
-            combat = {
-                weaponDamage = 0.03,
-                meleeDamage = 0.04
-            }
-        },
-        triggers = {
-            server = 'horizon_skill_tree:combat:unlocked',
-            client = 'horizon_skill_tree:combat:unlockedClient'
-        }
-    },
-    athletics_1 = {
-        id = 'athletics_1',
-        name = 'Atleta I',
-        description = 'Szybszy sprint.',
+    legs_1 = {
+        id = 'legs_1',
+        name = 'Nogi I',
+        description = 'Szybsze bieganie (+1%) i większa stamina.',
         cost = 1,
         requirement = nil,
-        x = 52,
+        x = 32,
+        y = 58,
+        color = '#f72585',
+        category = 'movement',
+        effects = {
+            movement = {
+                sprintBonus = 0.01,
+                staminaBonus = 0.05
+            }
+        }
+    },
+    legs_2 = {
+        id = 'legs_2',
+        name = 'Nogi II',
+        description = 'Szybsze bieganie (+2%) i większa stamina.',
+        cost = 1,
+        requirement = 'legs_1',
+        x = 20,
+        y = 48,
+        color = '#f72585',
+        category = 'movement',
+        effects = {
+            movement = {
+                sprintBonus = 0.02,
+                staminaBonus = 0.05
+            }
+        }
+    },
+    legs_3 = {
+        id = 'legs_3',
+        name = 'Nogi III',
+        description = 'Szybsze bieganie (+3%) i większa stamina.',
+        cost = 1,
+        requirement = 'legs_2',
+        x = 12,
         y = 36,
         color = '#f72585',
         category = 'movement',
         effects = {
             movement = {
-                sprintBonus = 0.05
+                sprintBonus = 0.03,
+                staminaBonus = 0.05
             }
         }
     },
-    athletics_2 = {
-        id = 'athletics_2',
-        name = 'Atleta II',
-        description = 'Jeszcze lepsza mobilność.',
-        cost = 2,
-        requirement = 'athletics_1',
-        x = 67,
+    legs_4 = {
+        id = 'legs_4',
+        name = 'Nogi IV',
+        description = 'Szybsze bieganie (+4%) i większa stamina.',
+        cost = 1,
+        requirement = 'legs_3',
+        x = 20,
         y = 24,
         color = '#f72585',
         category = 'movement',
         effects = {
             movement = {
-                sprintBonus = 0.08
+                sprintBonus = 0.04,
+                staminaBonus = 0.05
             }
         }
     },
-    driving_1 = {
-        id = 'driving_1',
-        name = 'Kierowca I',
-        description = 'Lepsza kontrola i mniejsze straty w pojeździe.',
+    legs_5 = {
+        id = 'legs_5',
+        name = 'Nogi V',
+        description = 'Szybsze bieganie (+5%) i większa stamina.',
         cost = 1,
-        requirement = nil,
-        x = 16,
-        y = 42,
-        color = '#fb5607',
-        category = 'driving',
-        effects = {
-            driving = {
-                vehicleDamageReduction = 0.08
-            }
-        }
-    },
-    driving_2 = {
-        id = 'driving_2',
-        name = 'Kierowca II',
-        description = 'Zaawansowana defensywa podczas jazdy.',
-        cost = 2,
-        requirement = 'driving_1',
-        x = 31,
-        y = 30,
-        color = '#fb5607',
-        category = 'driving',
-        effects = {
-            driving = {
-                vehicleDamageReduction = 0.12
-            }
-        }
-    },
-    crafting_1 = {
-        id = 'crafting_1',
-        name = 'Rzemieślnik I',
-        description = 'Mniejsze zużycie materiałów.',
-        cost = 1,
-        requirement = nil,
+        requirement = 'legs_4',
         x = 28,
-        y = 28,
-        color = '#38b000',
-        category = 'crafting'
-    },
-    crafting_2 = {
-        id = 'crafting_2',
-        name = 'Rzemieślnik II',
-        description = 'Wyższa jakość wytwarzanych przedmiotów.',
-        cost = 2,
-        requirement = 'crafting_1',
-        x = 45,
         y = 16,
-        color = '#38b000',
-        category = 'crafting'
+        color = '#f72585',
+        category = 'movement',
+        effects = {
+            movement = {
+                sprintBonus = 0.05,
+                staminaBonus = 0.05
+            }
+        }
     },
-    medical_1 = {
-        id = 'medical_1',
-        name = 'Ratownik I',
-        description = 'Szybsza pomoc medyczna.',
+    lungs_1 = {
+        id = 'lungs_1',
+        name = 'Buzia I',
+        description = 'Dłuższe oddychanie pod wodą.',
         cost = 1,
         requirement = nil,
-        x = 72,
-        y = 30,
+        x = 68,
+        y = 58,
         color = '#ffbe0b',
-        category = 'medical'
+        category = 'underwater',
+        effects = {
+            underwater = {
+                maxTimeBonus = 5.0
+            }
+        }
     },
-    medical_2 = {
-        id = 'medical_2',
-        name = 'Ratownik II',
-        description = 'Większa skuteczność leczenia.',
-        cost = 2,
-        requirement = 'medical_1',
-        x = 86,
-        y = 18,
+    lungs_2 = {
+        id = 'lungs_2',
+        name = 'Buzia II',
+        description = 'Jeszcze dłuższe oddychanie pod wodą.',
+        cost = 1,
+        requirement = 'lungs_1',
+        x = 80,
+        y = 48,
         color = '#ffbe0b',
-        category = 'medical'
+        category = 'underwater',
+        effects = {
+            underwater = {
+                maxTimeBonus = 5.0
+            }
+        }
+    },
+    lungs_3 = {
+        id = 'lungs_3',
+        name = 'Buzia III',
+        description = 'Duża wytrzymałość pod wodą.',
+        cost = 1,
+        requirement = 'lungs_2',
+        x = 88,
+        y = 36,
+        color = '#ffbe0b',
+        category = 'underwater',
+        effects = {
+            underwater = {
+                maxTimeBonus = 5.0
+            }
+        }
+    },
+    lungs_4 = {
+        id = 'lungs_4',
+        name = 'Buzia IV',
+        description = 'Bardzo duża wytrzymałość pod wodą.',
+        cost = 1,
+        requirement = 'lungs_3',
+        x = 80,
+        y = 24,
+        color = '#ffbe0b',
+        category = 'underwater',
+        effects = {
+            underwater = {
+                maxTimeBonus = 5.0
+            }
+        }
+    },
+    lungs_5 = {
+        id = 'lungs_5',
+        name = 'Buzia V',
+        description = 'Maksymalna wytrzymałość pod wodą.',
+        cost = 1,
+        requirement = 'lungs_4',
+        x = 70,
+        y = 12,
+        color = '#ffbe0b',
+        category = 'underwater',
+        effects = {
+            underwater = {
+                maxTimeBonus = 5.0
+            }
+        }
     }
 }
 

@@ -17,7 +17,9 @@ let anchors = {
 
 const CATEGORY_TITLES = {
     combat: 'Bijatyka',
-    movement: 'Atletyka',
+    movement: 'Nogi / Stamina',
+    strength: 'Siła',
+    underwater: 'Buzia / Pod wodą',
     driving: 'Jazda',
     gathering: 'Zbieractwo',
     crafting: 'Rzemiosło',
@@ -27,7 +29,9 @@ const CATEGORY_TITLES = {
 
 const CATEGORY_HAND = {
     combat: 'right',
-    movement: 'right',
+    movement: 'left',
+    strength: 'right',
+    underwater: 'right',
     driving: 'left',
     gathering: 'left',
     crafting: 'left',
