@@ -96,6 +96,13 @@ local function getSyncCombatEventName()
     return (Config.Triggers and Config.Triggers.SyncCombatServer) or 'horizon_skill_tree:server:syncCombat'
 end
 
+local function shouldSyncBonuses()
+    local combatEnabled = Config.Combat and Config.Combat.Enabled
+    local movementEnabled = Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled
+    local drivingEnabled = Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled
+    return combatEnabled or movementEnabled or drivingEnabled
+end
+
 local function setMenuState(state)
     isMenuOpen = state
     if state then
@@ -160,7 +167,7 @@ RegisterNetEvent('horizon_skill_tree:client:open', function(payload)
         skills = payload.skills
     })
 
-    if Config.Combat and Config.Combat.Enabled then
+    if shouldSyncBonuses() then
         TriggerServerEvent(getSyncCombatEventName())
     end
 
@@ -236,13 +243,18 @@ RegisterNetEvent('horizon_skill_tree:client:applyCombat', function(mods)
 end)
 
 RegisterNetEvent('horizon_skill_tree:client:requestCombatSync', function()
-    if Config.Combat and Config.Combat.Enabled then
+    if shouldSyncBonuses() then
         TriggerServerEvent(getSyncCombatEventName())
     end
 end)
 
 AddEventHandler('playerSpawned', function()
-    if Config.Combat and Config.Combat.Enabled and Config.Combat.ReapplyOnSpawn then
+    local reapplyOnSpawn = true
+    if Config.Combat and Config.Combat.ReapplyOnSpawn == false then
+        reapplyOnSpawn = false
+    end
+
+    if shouldSyncBonuses() and reapplyOnSpawn then
         TriggerServerEvent(getSyncCombatEventName())
     end
 end)

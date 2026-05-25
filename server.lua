@@ -182,45 +182,6 @@ local function buildCombatModifiers(skills)
         return weaponBonus, meleeBonus
     end
 
-    local function buildNativeModifiers(skills)
-        local sprintBonus, vehicleDamageReduction = 0.0, 0.0
-        if type(skills) ~= 'table' then
-            return sprintBonus, vehicleDamageReduction
-        end
-
-        for skillId, unlocked in pairs(skills) do
-            if unlocked and Config.Skills[skillId] then
-                local effects = Config.Skills[skillId].effects
-                local movement = effects and effects.movement
-                local driving = effects and effects.driving
-
-                if movement then
-                    sprintBonus = sprintBonus + (tonumber(movement.sprintBonus) or 0.0)
-                end
-                if driving then
-                    vehicleDamageReduction = vehicleDamageReduction + (tonumber(driving.vehicleDamageReduction) or 0.0)
-                end
-            end
-        end
-
-        if Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled then
-            sprintBonus = math.min(math.max(0.0, sprintBonus), tonumber(Config.Native.Movement.MaxSprintBonus) or 0.0)
-        else
-            sprintBonus = 0.0
-        end
-
-        if Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled then
-            vehicleDamageReduction = math.min(
-                math.max(0.0, vehicleDamageReduction),
-                tonumber(Config.Native.Driving.MaxDamageReduction) or 0.0
-            )
-        else
-            vehicleDamageReduction = 0.0
-        end
-
-        return sprintBonus, vehicleDamageReduction
-    end
-
     if type(skills) ~= 'table' then
         return weaponBonus, meleeBonus
     end
@@ -239,6 +200,45 @@ local function buildCombatModifiers(skills)
     meleeBonus = math.min(meleeBonus, tonumber(Config.Combat.MaxMeleeBonus) or 0.0)
 
     return weaponBonus, meleeBonus
+end
+
+local function buildNativeModifiers(skills)
+    local sprintBonus, vehicleDamageReduction = 0.0, 0.0
+    if type(skills) ~= 'table' then
+        return sprintBonus, vehicleDamageReduction
+    end
+
+    for skillId, unlocked in pairs(skills) do
+        if unlocked and Config.Skills[skillId] then
+            local effects = Config.Skills[skillId].effects
+            local movement = effects and effects.movement
+            local driving = effects and effects.driving
+
+            if movement then
+                sprintBonus = sprintBonus + (tonumber(movement.sprintBonus) or 0.0)
+            end
+            if driving then
+                vehicleDamageReduction = vehicleDamageReduction + (tonumber(driving.vehicleDamageReduction) or 0.0)
+            end
+        end
+    end
+
+    if Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled then
+        sprintBonus = math.min(math.max(0.0, sprintBonus), tonumber(Config.Native.Movement.MaxSprintBonus) or 0.0)
+    else
+        sprintBonus = 0.0
+    end
+
+    if Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled then
+        vehicleDamageReduction = math.min(
+            math.max(0.0, vehicleDamageReduction),
+            tonumber(Config.Native.Driving.MaxDamageReduction) or 0.0
+        )
+    else
+        vehicleDamageReduction = 0.0
+    end
+
+    return sprintBonus, vehicleDamageReduction
 end
 
 local function getFishingIntegrationConfig()
@@ -366,66 +366,66 @@ local function isAllowedBridgeResource(resourceName)
     return false
 end
 
+local function resetPlayerProgress(source)
+    local data, identifier = getOrCreatePlayerData(source)
+    if not data then
+        return false
+    end
+
+    data.xp = 0
+    data.level = 1
+    data.skillPoints = 0
+    data.skills = {}
+
+    savePlayerData(identifier, data)
+    syncPlayerData(source)
+    TriggerClientEvent('horizon_skill_tree:client:requestCombatSync', source)
+
+    return true
+end
+
+local function isAdminSource(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then
+        return false
+    end
+
+    local allowed = Config.Admin and Config.Admin.AllowedGroups
+    if type(allowed) ~= 'table' or #allowed == 0 then
+        return false
+    end
+
+    local group = type(xPlayer.getGroup) == 'function' and xPlayer.getGroup() or nil
+    if type(group) ~= 'string' then
+        return false
+    end
+
+    for _, allowedGroup in ipairs(allowed) do
+        if allowedGroup == group then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function resolveTargetSource(adminSource, value)
+    if value == 'me' then
+        return adminSource
+    end
+
+    local target = tonumber(value)
+    if not target then
+        return nil
+    end
+
+    return GetPlayerName(target) and target or nil
+end
+
 local function tryPurchaseSkill(source, skillId)
     local skill = Config.Skills[skillId]
     if not skill then
         return false, 'Nie znaleziono umiejętności.'
-    end
-
-    local function resetPlayerProgress(source)
-        local data, identifier = getOrCreatePlayerData(source)
-        if not data then
-            return false
-        end
-
-        data.xp = 0
-        data.level = 1
-        data.skillPoints = 0
-        data.skills = {}
-
-        savePlayerData(identifier, data)
-        syncPlayerData(source)
-        TriggerClientEvent('horizon_skill_tree:client:requestCombatSync', source)
-
-        return true
-    end
-
-    local function isAdminSource(source)
-        local xPlayer = ESX.GetPlayerFromId(source)
-        if not xPlayer then
-            return false
-        end
-
-        local allowed = Config.Admin and Config.Admin.AllowedGroups
-        if type(allowed) ~= 'table' or #allowed == 0 then
-            return false
-        end
-
-        local group = type(xPlayer.getGroup) == 'function' and xPlayer.getGroup() or nil
-        if type(group) ~= 'string' then
-            return false
-        end
-
-        for _, allowedGroup in ipairs(allowed) do
-            if allowedGroup == group then
-                return true
-            end
-        end
-
-        return false
-    end
-
-    local function resolveTargetSource(adminSource, value)
-        if value == 'me' then
-            return adminSource
-        end
-
-        local target = tonumber(value)
-        if not target then
-            return nil
-        end
-
-        return GetPlayerName(target) and target or nil
     end
 
     local data, identifier = getOrCreatePlayerData(source)
