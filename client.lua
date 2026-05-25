@@ -1,6 +1,10 @@
 local isMenuOpen = false
 local isDataLoading = false
 
+local function getSyncCombatEventName()
+    return (Config.Triggers and Config.Triggers.SyncCombatServer) or 'horizon_skill_tree:server:syncCombat'
+end
+
 local function setMenuState(state)
     isMenuOpen = state
     SetNuiFocus(state, state)
@@ -41,6 +45,10 @@ end, false)
 
 RegisterKeyMapping(Config.OpenCommand, Config.OpenDescription, 'keyboard', Config.DefaultKey)
 
+RegisterNetEvent((Config.Triggers and Config.Triggers.OpenMenuClient) or 'horizon_skill_tree:client:toggleMenu', function()
+    toggleMenu()
+end)
+
 RegisterNetEvent('horizon_skill_tree:client:open', function(payload)
     isDataLoading = false
 
@@ -53,6 +61,10 @@ RegisterNetEvent('horizon_skill_tree:client:open', function(payload)
         player = payload.player,
         skills = payload.skills
     })
+
+    if Config.Combat and Config.Combat.Enabled then
+        TriggerServerEvent(getSyncCombatEventName())
+    end
 
     if not isMenuOpen then
         setMenuState(true)
@@ -91,6 +103,35 @@ RegisterNUICallback('purchaseSkill', function(data, cb)
 
     TriggerServerEvent('horizon_skill_tree:server:purchaseSkill', data.skillId)
     cb({ ok = true })
+end)
+
+RegisterNetEvent('horizon_skill_tree:client:applyCombat', function(mods)
+    if not Config.Combat or not Config.Combat.Enabled then
+        SetPlayerWeaponDamageModifier(PlayerId(), 1.0)
+        SetPlayerMeleeWeaponDamageModifier(PlayerId(), 1.0)
+        return
+    end
+
+    local weaponBonus = (mods and tonumber(mods.weapon)) or 0.0
+    local meleeBonus = (mods and tonumber(mods.melee)) or 0.0
+
+    local weaponModifier = 1.0 + math.max(0.0, weaponBonus)
+    local meleeModifier = 1.0 + math.max(0.0, meleeBonus)
+
+    SetPlayerWeaponDamageModifier(PlayerId(), weaponModifier)
+    SetPlayerMeleeWeaponDamageModifier(PlayerId(), meleeModifier)
+end)
+
+RegisterNetEvent('horizon_skill_tree:client:requestCombatSync', function()
+    if Config.Combat and Config.Combat.Enabled then
+        TriggerServerEvent(getSyncCombatEventName())
+    end
+end)
+
+AddEventHandler('playerSpawned', function()
+    if Config.Combat and Config.Combat.Enabled and Config.Combat.ReapplyOnSpawn then
+        TriggerServerEvent(getSyncCombatEventName())
+    end
 end)
 
 CreateThread(function()

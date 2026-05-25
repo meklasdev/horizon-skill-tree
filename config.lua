@@ -1,9 +1,43 @@
 Config = {}
 
+--[[
+    Zależności:
+    - Wymagane: es_extended, oxmysql
+    - Opcjonalne: ox_lib (UI/notify), ox_target (interakcje)
+
+    Każdy skill w Config.Skills może mieć pola:
+    id, name, description, cost, requirement, x, y, color, category, effects, triggers
+
+    effects.combat:
+    - weaponDamage = 0.02  -- +2% dmg broni
+    - meleeDamage = 0.04   -- +4% dmg melee
+
+    triggers:
+    - server = 'twoj:event:server'
+    - client = 'twoj:event:client'
+]]
+
 -- Ustawienia otwierania menu
 Config.OpenCommand = 'skills'
 Config.DefaultKey = 'K'
 Config.OpenDescription = 'Otwórz Drzewko Umiejętności'
+
+-- Gotowe triggery (możesz podmienić pod swój ekosystem)
+Config.Triggers = {
+    OpenMenuClient = 'horizon_skill_tree:client:toggleMenu',
+    SyncCombatServer = 'horizon_skill_tree:server:syncCombat',
+    OnSkillUnlockServer = 'horizon_skill_tree:trigger:skillUnlocked',
+    OnSkillUnlockClient = 'horizon_skill_tree:trigger:skillUnlockedClient',
+    OnLevelUpServer = 'horizon_skill_tree:trigger:levelUp'
+}
+
+-- Natywne bonusy walki z limitem anti-OP
+Config.Combat = {
+    Enabled = true,
+    MaxWeaponBonus = 0.05, -- max +5%
+    MaxMeleeBonus = 0.08,  -- max +8%
+    ReapplyOnSpawn = true
+}
 
 -- Ustawienia progresji
 Config.Leveling = {
@@ -45,7 +79,17 @@ Config.Skills = {
         x = 50,
         y = 70,
         color = '#3a86ff',
-        category = 'combat'
+        category = 'combat',
+        effects = {
+            combat = {
+                weaponDamage = 0.02,
+                meleeDamage = 0.04
+            }
+        },
+        triggers = {
+            server = 'horizon_skill_tree:combat:unlocked',
+            client = 'horizon_skill_tree:combat:unlockedClient'
+        }
     },
     combat_2 = {
         id = 'combat_2',
@@ -56,7 +100,17 @@ Config.Skills = {
         x = 65,
         y = 52,
         color = '#3a86ff',
-        category = 'combat'
+        category = 'combat',
+        effects = {
+            combat = {
+                weaponDamage = 0.03,
+                meleeDamage = 0.04
+            }
+        },
+        triggers = {
+            server = 'horizon_skill_tree:combat:unlocked',
+            client = 'horizon_skill_tree:combat:unlockedClient'
+        }
     },
     crafting_1 = {
         id = 'crafting_1',

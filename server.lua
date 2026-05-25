@@ -1,5 +1,6 @@
 local ESX = exports['es_extended']:getSharedObject()
 local PlayerDataCache = {}
+local triggerConfiguredEvent
 
 local function getIdentifier(source)
     local xPlayer = ESX.GetPlayerFromId(source)
@@ -134,6 +135,10 @@ local function addXP(source, amount)
             ('Awans! Osiągnięto poziom %s i otrzymano %s punkt(ów) umiejętności.')
             :format(newLevel, gainedLevels * Config.Leveling.SkillPointsPerLevel)
         )
+
+        if Config.Triggers then
+            triggerConfiguredEvent(Config.Triggers.OnLevelUpServer, source, newLevel, data)
+        end
     else
         data.level = newLevel
     end
@@ -160,6 +165,40 @@ local function addSkillPoints(source, amount)
     syncPlayerData(source)
 
     return true
+end
+
+triggerConfiguredEvent = function(eventName, ...)
+    if type(eventName) ~= 'string' or eventName == '' then
+        return
+    end
+
+    TriggerEvent(eventName, ...)
+end
+
+local function buildCombatModifiers(skills)
+    local weaponBonus, meleeBonus = 0.0, 0.0
+    if not Config.Combat or not Config.Combat.Enabled then
+        return weaponBonus, meleeBonus
+    end
+
+    if type(skills) ~= 'table' then
+        return weaponBonus, meleeBonus
+    end
+
+    for skillId, unlocked in pairs(skills) do
+        if unlocked and Config.Skills[skillId] then
+            local combat = Config.Skills[skillId].effects and Config.Skills[skillId].effects.combat
+            if combat then
+                weaponBonus = weaponBonus + (tonumber(combat.weaponDamage) or 0.0)
+                meleeBonus = meleeBonus + (tonumber(combat.meleeDamage) or 0.0)
+            end
+        end
+    end
+
+    weaponBonus = math.min(weaponBonus, tonumber(Config.Combat.MaxWeaponBonus) or 0.0)
+    meleeBonus = math.min(meleeBonus, tonumber(Config.Combat.MaxMeleeBonus) or 0.0)
+
+    return weaponBonus, meleeBonus
 end
 
 local function tryPurchaseSkill(source, skillId)
@@ -190,6 +229,22 @@ local function tryPurchaseSkill(source, skillId)
 
     savePlayerData(identifier, data)
     syncPlayerData(source)
+
+    if type(skill.triggers) == 'table' then
+        triggerConfiguredEvent(skill.triggers.server, source, skillId, skill)
+        if type(skill.triggers.client) == 'string' and skill.triggers.client ~= '' then
+            TriggerClientEvent(skill.triggers.client, source, skillId, skill)
+        end
+    end
+
+    if Config.Triggers then
+        triggerConfiguredEvent(Config.Triggers.OnSkillUnlockServer, source, skillId, skill)
+        if type(Config.Triggers.OnSkillUnlockClient) == 'string' and Config.Triggers.OnSkillUnlockClient ~= '' then
+            TriggerClientEvent(Config.Triggers.OnSkillUnlockClient, source, skillId, skill)
+        end
+    end
+
+    TriggerClientEvent('horizon_skill_tree:client:requestCombatSync', source)
 
     return true, 'Odblokowano umiejętność: ' .. skill.name
 end
@@ -234,6 +289,21 @@ exports('RemoveSkillPoints', function(source, amount)
     return addSkillPoints(source, -(tonumber(amount) or 0))
 end)
 exports('HasSkill', hasSkill)
+
+RegisterNetEvent((Config.Triggers and Config.Triggers.SyncCombatServer) or 'horizon_skill_tree:server:syncCombat', function()
+    local source = source
+    local data = PlayerDataCache[source] or getOrCreatePlayerData(source)
+    if not data then
+        return
+    end
+
+    local weaponBonus, meleeBonus = buildCombatModifiers(data.skills)
+
+    TriggerClientEvent('horizon_skill_tree:client:applyCombat', source, {
+        weapon = weaponBonus,
+        melee = meleeBonus
+    })
+end)
 
 AddEventHandler('playerDropped', function()
     local source = source
