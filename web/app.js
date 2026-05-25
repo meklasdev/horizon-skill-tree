@@ -342,7 +342,7 @@ window.addEventListener('message', ({ data }) => {
         anchors.left = normalizeAnchor(data.anchors?.left, 0.34, 0.62);
         anchors.right = normalizeAnchor(data.anchors?.right, 0.66, 0.62);
         if (!app.classList.contains('hidden')) {
-            drawNodes();
+            drawConnections();
         }
     }
 });
