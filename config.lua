@@ -39,6 +39,47 @@ Config.Combat = {
     ReapplyOnSpawn = true
 }
 
+-- Natywne modyfikatory gracza/pojazdu
+Config.Native = {
+    Movement = {
+        Enabled = true,
+        MaxSprintBonus = 0.25 -- bazowo 1.0, maks 1.25
+    },
+    Driving = {
+        Enabled = true,
+        MaxDamageReduction = 0.35 -- redukcja obrażeń pojazdu max 35%
+    }
+}
+
+-- XP przyznawane automatycznie za aktywność
+Config.ActivityXP = {
+    Enabled = true,
+    IntervalSeconds = 60,
+    BasePlayXP = 6,
+    AFK = {
+        Enabled = true,
+        MinDistance = 1.5,
+        MaxIdleIntervals = 2
+    },
+    Running = {
+        Enabled = true,
+        MinSpeed = 2.8,
+        BonusXP = 4
+    },
+    Driving = {
+        Enabled = true,
+        MinSpeed = 12.0,
+        BonusXP = 6
+    }
+}
+
+-- Jedna komenda administracyjna ESX:
+-- /skilladmin <id|me> <addxp|addsp|reset> [amount]
+Config.Admin = {
+    Command = 'skilladmin',
+    AllowedGroups = { 'admin', 'superadmin' }
+}
+
 -- Publiczne eventy net (klient -> serwer). Trzymaj wyłączone jeśli nie są wymagane.
 Config.Security = {
     AllowClientAddXPEvent = false,
@@ -128,6 +169,70 @@ Config.Skills = {
         triggers = {
             server = 'horizon_skill_tree:combat:unlocked',
             client = 'horizon_skill_tree:combat:unlockedClient'
+        }
+    },
+    athletics_1 = {
+        id = 'athletics_1',
+        name = 'Atleta I',
+        description = 'Szybszy sprint.',
+        cost = 1,
+        requirement = nil,
+        x = 52,
+        y = 36,
+        color = '#f72585',
+        category = 'movement',
+        effects = {
+            movement = {
+                sprintBonus = 0.05
+            }
+        }
+    },
+    athletics_2 = {
+        id = 'athletics_2',
+        name = 'Atleta II',
+        description = 'Jeszcze lepsza mobilność.',
+        cost = 2,
+        requirement = 'athletics_1',
+        x = 67,
+        y = 24,
+        color = '#f72585',
+        category = 'movement',
+        effects = {
+            movement = {
+                sprintBonus = 0.08
+            }
+        }
+    },
+    driving_1 = {
+        id = 'driving_1',
+        name = 'Kierowca I',
+        description = 'Lepsza kontrola i mniejsze straty w pojeździe.',
+        cost = 1,
+        requirement = nil,
+        x = 16,
+        y = 42,
+        color = '#fb5607',
+        category = 'driving',
+        effects = {
+            driving = {
+                vehicleDamageReduction = 0.08
+            }
+        }
+    },
+    driving_2 = {
+        id = 'driving_2',
+        name = 'Kierowca II',
+        description = 'Zaawansowana defensywa podczas jazdy.',
+        cost = 2,
+        requirement = 'driving_1',
+        x = 31,
+        y = 30,
+        color = '#fb5607',
+        category = 'driving',
+        effects = {
+            driving = {
+                vehicleDamageReduction = 0.12
+            }
         }
     },
     crafting_1 = {

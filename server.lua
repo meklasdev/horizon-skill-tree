@@ -1,5 +1,6 @@
 local ESX = exports['es_extended']:getSharedObject()
 local PlayerDataCache = {}
+local ActivityCache = {}
 local triggerConfiguredEvent
 
 local function getIdentifier(source)
@@ -201,6 +202,45 @@ local function buildCombatModifiers(skills)
     return weaponBonus, meleeBonus
 end
 
+local function buildNativeModifiers(skills)
+    local sprintBonus, vehicleDamageReduction = 0.0, 0.0
+    if type(skills) ~= 'table' then
+        return sprintBonus, vehicleDamageReduction
+    end
+
+    for skillId, unlocked in pairs(skills) do
+        if unlocked and Config.Skills[skillId] then
+            local effects = Config.Skills[skillId].effects
+            local movement = effects and effects.movement
+            local driving = effects and effects.driving
+
+            if movement then
+                sprintBonus = sprintBonus + (tonumber(movement.sprintBonus) or 0.0)
+            end
+            if driving then
+                vehicleDamageReduction = vehicleDamageReduction + (tonumber(driving.vehicleDamageReduction) or 0.0)
+            end
+        end
+    end
+
+    if Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled then
+        sprintBonus = math.min(math.max(0.0, sprintBonus), tonumber(Config.Native.Movement.MaxSprintBonus) or 0.0)
+    else
+        sprintBonus = 0.0
+    end
+
+    if Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled then
+        vehicleDamageReduction = math.min(
+            math.max(0.0, vehicleDamageReduction),
+            tonumber(Config.Native.Driving.MaxDamageReduction) or 0.0
+        )
+    else
+        vehicleDamageReduction = 0.0
+    end
+
+    return sprintBonus, vehicleDamageReduction
+end
+
 local function getFishingIntegrationConfig()
     return Config.Integrations and Config.Integrations.Fishing or nil
 end
@@ -326,6 +366,62 @@ local function isAllowedBridgeResource(resourceName)
     return false
 end
 
+local function resetPlayerProgress(source)
+    local data, identifier = getOrCreatePlayerData(source)
+    if not data then
+        return false
+    end
+
+    data.xp = 0
+    data.level = 1
+    data.skillPoints = 0
+    data.skills = {}
+
+    savePlayerData(identifier, data)
+    syncPlayerData(source)
+    TriggerClientEvent('horizon_skill_tree:client:requestCombatSync', source)
+
+    return true
+end
+
+local function isAdminSource(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then
+        return false
+    end
+
+    local allowed = Config.Admin and Config.Admin.AllowedGroups
+    if type(allowed) ~= 'table' or #allowed == 0 then
+        return false
+    end
+
+    local group = type(xPlayer.getGroup) == 'function' and xPlayer.getGroup() or nil
+    if type(group) ~= 'string' then
+        return false
+    end
+
+    for _, allowedGroup in ipairs(allowed) do
+        if allowedGroup == group then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function resolveTargetSource(adminSource, value)
+    if value == 'me' then
+        return adminSource
+    end
+
+    local target = tonumber(value)
+    if not target then
+        return nil
+    end
+
+    return GetPlayerName(target) and target or nil
+end
+
 local function tryPurchaseSkill(source, skillId)
     local skill = Config.Skills[skillId]
     if not skill then
@@ -438,12 +534,78 @@ RegisterNetEvent((Config.Triggers and Config.Triggers.SyncCombatServer) or 'hori
     end
 
     local weaponBonus, meleeBonus = buildCombatModifiers(data.skills)
+    local sprintBonus, vehicleDamageReduction = buildNativeModifiers(data.skills)
 
     TriggerClientEvent('horizon_skill_tree:client:applyCombat', source, {
         weapon = weaponBonus,
-        melee = meleeBonus
+        melee = meleeBonus,
+        sprintBonus = sprintBonus,
+        vehicleDamageReduction = vehicleDamageReduction
     })
 end)
+
+RegisterCommand((Config.Admin and Config.Admin.Command) or 'skilladmin', function(source, args)
+    if source == 0 then
+        print('[horizon-skill-tree] Komenda dostępna tylko dla graczy in-game.')
+        return
+    end
+
+    if not isAdminSource(source) then
+        TriggerClientEvent('esx:showNotification', source, 'Brak uprawnień do użycia tej komendy.')
+        return
+    end
+
+    local targetSource = resolveTargetSource(source, tostring(args[1] or ''))
+    local action = tostring(args[2] or ''):lower()
+    local amount = tonumber(args[3] or 0)
+
+    if not targetSource or action == '' then
+        TriggerClientEvent('esx:showNotification', source,
+            ('Użycie: /%s <id|me> <addxp|addsp|reset> [amount]')
+            :format((Config.Admin and Config.Admin.Command) or 'skilladmin'))
+        return
+    end
+
+    if action == 'addxp' then
+        if not amount or amount == 0 then
+            TriggerClientEvent('esx:showNotification', source, 'Podaj poprawną ilość XP.')
+            return
+        end
+
+        addXP(targetSource, amount)
+        TriggerClientEvent('esx:showNotification', source, ('Dodano %s XP dla ID %s.'):format(math.floor(amount), targetSource))
+        TriggerClientEvent('esx:showNotification', targetSource,
+            ('Administrator dodał Ci %s XP.'):format(math.floor(amount)))
+        return
+    end
+
+    if action == 'addsp' then
+        if not amount or amount == 0 then
+            TriggerClientEvent('esx:showNotification', source, 'Podaj poprawną ilość punktów.')
+            return
+        end
+
+        addSkillPoints(targetSource, amount)
+        TriggerClientEvent('esx:showNotification', source,
+            ('Dodano %s punkt(ów) umiejętności dla ID %s.'):format(math.floor(amount), targetSource))
+        TriggerClientEvent('esx:showNotification', targetSource,
+            ('Administrator dodał Ci %s punkt(ów) umiejętności.'):format(math.floor(amount)))
+        return
+    end
+
+    if action == 'reset' then
+        if not resetPlayerProgress(targetSource) then
+            TriggerClientEvent('esx:showNotification', source, 'Nie udało się zresetować postępu.')
+            return
+        end
+
+        TriggerClientEvent('esx:showNotification', source, ('Zresetowano postęp gracza ID %s.'):format(targetSource))
+        TriggerClientEvent('esx:showNotification', targetSource, 'Administrator zresetował Twój postęp skilli.')
+        return
+    end
+
+    TriggerClientEvent('esx:showNotification', source, 'Dostępne akcje: addxp, addsp, reset.')
+end, false)
 
 local fishingIntegrationEvent = getFishingIntegrationConfig()
 fishingIntegrationEvent = fishingIntegrationEvent and fishingIntegrationEvent.Events and fishingIntegrationEvent.Events.CatchReportedServer
@@ -476,6 +638,7 @@ AddEventHandler('playerDropped', function()
     local identifier = getIdentifier(source)
     savePlayerData(identifier, data)
     PlayerDataCache[source] = nil
+    ActivityCache[source] = nil
 end)
 
 AddEventHandler('onResourceStop', function(resourceName)
@@ -500,4 +663,77 @@ CreateThread(function()
             PRIMARY KEY (identifier)
         )
     ]])
+end)
+
+CreateThread(function()
+    while true do
+        local activity = Config.ActivityXP or {}
+        if activity.Enabled ~= true then
+            Wait(30000)
+        else
+            local interval = math.max(10, tonumber(activity.IntervalSeconds) or 60)
+            Wait(interval * 1000)
+
+            for _, playerId in ipairs(GetPlayers()) do
+                local source = tonumber(playerId)
+                if source then
+                    local ped = GetPlayerPed(source)
+                    if ped and ped > 0 and DoesEntityExist(ped) then
+                        local coords = GetEntityCoords(ped)
+                        local speed = GetEntitySpeed(ped)
+                        local playerActivity = ActivityCache[source] or { idleIntervals = 0 }
+
+                        local movedEnough = true
+                        if activity.AFK and activity.AFK.Enabled and playerActivity.lastCoords then
+                            local minDistance = tonumber(activity.AFK.MinDistance) or 1.5
+                            local dx = coords.x - playerActivity.lastCoords.x
+                            local dy = coords.y - playerActivity.lastCoords.y
+                            local dz = coords.z - playerActivity.lastCoords.z
+                            local distance = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+                            movedEnough = distance >= minDistance
+                        end
+
+                        if movedEnough then
+                            playerActivity.idleIntervals = 0
+                        else
+                            playerActivity.idleIntervals = (playerActivity.idleIntervals or 0) + 1
+                        end
+
+                        playerActivity.lastCoords = coords
+                        ActivityCache[source] = playerActivity
+
+                        local maxIdle = activity.AFK and tonumber(activity.AFK.MaxIdleIntervals) or 0
+                        if playerActivity.idleIntervals > maxIdle then
+                            goto continue
+                        end
+
+                        local xpToAdd = tonumber(activity.BasePlayXP) or 0
+
+                        if activity.Driving and activity.Driving.Enabled then
+                            local veh = GetVehiclePedIsIn(ped, false)
+                            if veh and veh > 0 and GetPedInVehicleSeat(veh, -1) == ped then
+                                local minSpeed = tonumber(activity.Driving.MinSpeed) or 12.0
+                                if speed >= minSpeed then
+                                    xpToAdd = xpToAdd + (tonumber(activity.Driving.BonusXP) or 0)
+                                end
+                            end
+                        end
+
+                        if activity.Running and activity.Running.Enabled and not IsPedInAnyVehicle(ped, false) then
+                            local minRunSpeed = tonumber(activity.Running.MinSpeed) or 2.8
+                            if speed >= minRunSpeed then
+                                xpToAdd = xpToAdd + (tonumber(activity.Running.BonusXP) or 0)
+                            end
+                        end
+
+                        if xpToAdd > 0 then
+                            addXP(source, xpToAdd)
+                        end
+                    end
+                end
+
+                ::continue::
+            end
+        end
+    end
 end)
