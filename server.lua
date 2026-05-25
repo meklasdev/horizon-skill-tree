@@ -177,13 +177,13 @@ triggerConfiguredEvent = function(eventName, ...)
 end
 
 local function buildCombatModifiers(skills)
-    local weaponBonus, meleeBonus = 0.0, 0.0
+    local weaponBonus, meleeBonus, recoilReduction = 0.0, 0.0, 0.0
     if not Config.Combat or not Config.Combat.Enabled then
-        return weaponBonus, meleeBonus
+        return weaponBonus, meleeBonus, recoilReduction
     end
 
     if type(skills) ~= 'table' then
-        return weaponBonus, meleeBonus
+        return weaponBonus, meleeBonus, recoilReduction
     end
 
     for skillId, unlocked in pairs(skills) do
@@ -192,30 +192,37 @@ local function buildCombatModifiers(skills)
             if combat then
                 weaponBonus = weaponBonus + (tonumber(combat.weaponDamage) or 0.0)
                 meleeBonus = meleeBonus + (tonumber(combat.meleeDamage) or 0.0)
+                recoilReduction = recoilReduction + (tonumber(combat.recoilReduction) or 0.0)
             end
         end
     end
 
     weaponBonus = math.min(weaponBonus, tonumber(Config.Combat.MaxWeaponBonus) or 0.0)
     meleeBonus = math.min(meleeBonus, tonumber(Config.Combat.MaxMeleeBonus) or 0.0)
+    recoilReduction = math.min(math.max(0.0, recoilReduction), tonumber(Config.Combat.MaxRecoilReduction) or 0.0)
 
-    return weaponBonus, meleeBonus
+    return weaponBonus, meleeBonus, recoilReduction
 end
 
 local function buildNativeModifiers(skills)
-    local sprintBonus, vehicleDamageReduction = 0.0, 0.0
+    local sprintBonus, staminaBonus, underwaterTimeBonus, vehicleDamageReduction = 0.0, 0.0, 0.0, 0.0
     if type(skills) ~= 'table' then
-        return sprintBonus, vehicleDamageReduction
+        return sprintBonus, staminaBonus, underwaterTimeBonus, vehicleDamageReduction
     end
 
     for skillId, unlocked in pairs(skills) do
         if unlocked and Config.Skills[skillId] then
             local effects = Config.Skills[skillId].effects
             local movement = effects and effects.movement
+            local underwater = effects and effects.underwater
             local driving = effects and effects.driving
 
             if movement then
                 sprintBonus = sprintBonus + (tonumber(movement.sprintBonus) or 0.0)
+                staminaBonus = staminaBonus + (tonumber(movement.staminaBonus) or 0.0)
+            end
+            if underwater then
+                underwaterTimeBonus = underwaterTimeBonus + (tonumber(underwater.maxTimeBonus) or 0.0)
             end
             if driving then
                 vehicleDamageReduction = vehicleDamageReduction + (tonumber(driving.vehicleDamageReduction) or 0.0)
@@ -225,8 +232,19 @@ local function buildNativeModifiers(skills)
 
     if Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled then
         sprintBonus = math.min(math.max(0.0, sprintBonus), tonumber(Config.Native.Movement.MaxSprintBonus) or 0.0)
+        staminaBonus = math.min(math.max(0.0, staminaBonus), tonumber(Config.Native.Movement.MaxStaminaBonus) or 0.0)
     else
         sprintBonus = 0.0
+        staminaBonus = 0.0
+    end
+
+    if Config.Native and Config.Native.Underwater and Config.Native.Underwater.Enabled then
+        underwaterTimeBonus = math.min(
+            math.max(0.0, underwaterTimeBonus),
+            tonumber(Config.Native.Underwater.MaxTimeBonus) or 0.0
+        )
+    else
+        underwaterTimeBonus = 0.0
     end
 
     if Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled then
@@ -238,7 +256,7 @@ local function buildNativeModifiers(skills)
         vehicleDamageReduction = 0.0
     end
 
-    return sprintBonus, vehicleDamageReduction
+    return sprintBonus, staminaBonus, underwaterTimeBonus, vehicleDamageReduction
 end
 
 local function getFishingIntegrationConfig()
@@ -533,13 +551,16 @@ RegisterNetEvent((Config.Triggers and Config.Triggers.SyncCombatServer) or 'hori
         return
     end
 
-    local weaponBonus, meleeBonus = buildCombatModifiers(data.skills)
-    local sprintBonus, vehicleDamageReduction = buildNativeModifiers(data.skills)
+    local weaponBonus, meleeBonus, recoilReduction = buildCombatModifiers(data.skills)
+    local sprintBonus, staminaBonus, underwaterTimeBonus, vehicleDamageReduction = buildNativeModifiers(data.skills)
 
     TriggerClientEvent('horizon_skill_tree:client:applyCombat', source, {
         weapon = weaponBonus,
         melee = meleeBonus,
+        recoilReduction = recoilReduction,
         sprintBonus = sprintBonus,
+        staminaBonus = staminaBonus,
+        underwaterTimeBonus = underwaterTimeBonus,
         vehicleDamageReduction = vehicleDamageReduction
     })
 end)
