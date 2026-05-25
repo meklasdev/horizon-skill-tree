@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Horizon Skill Tree</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <main id="app" class="hidden">
+        <div class="hud-top-left" id="pointsCounter">0 point</div>
+
+        <section class="skill-tree-frame">
+            <svg id="connections" class="connections"></svg>
+            <div id="nodes" class="nodes"></div>
+        </section>
+
+        <aside class="details-panel">
+            <h2 id="skillName">Wybierz umiejętność</h2>
+            <p id="skillDescription">Kliknij węzeł, aby sprawdzić wymagania i koszt.</p>
+        </aside>
+
+        <div class="hud-bottom-right">
+            <span>[ESC] Zamknij</span>
+            <span>[ENTER/M1] Wybierz</span>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
