@@ -105,6 +105,9 @@ body {
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
     cursor: pointer;
     transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    opacity: 0;
+    animation: nodeIn 0.22s ease forwards;
+    animation-delay: var(--node-delay, 0ms);
 }
 
 .skill-node::after {
@@ -128,6 +131,8 @@ body {
     font-size: 10px;
     text-align: center;
     padding: 8px;
+    color: #f3f6ff;
+    letter-spacing: 0.3px;
 }
 
 .skill-node.unlocked {
@@ -136,6 +141,23 @@ body {
 }
 
 .skill-node.available {
+    border-color: var(--node-color);
+}
+
+.skill-node.category-node {
+    width: 80px;
+    height: 80px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(20, 28, 42, 0.96), rgba(9, 13, 24, 0.98));
+}
+
+.skill-node.category-node .diamond-content {
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.skill-node.category-node.opened {
+    box-shadow: 0 0 18px var(--node-color), inset 0 0 8px rgba(255, 255, 255, 0.12);
     border-color: var(--node-color);
 }
 
@@ -154,8 +176,26 @@ body {
     animation: flow 0.9s linear infinite;
 }
 
+.connection.hand-link {
+    stroke: rgba(126, 211, 255, 0.7);
+    stroke-width: 2.5;
+    stroke-dasharray: 6 6;
+    animation: flow 1.5s linear infinite;
+}
+
 @keyframes flow {
     to {
         stroke-dashoffset: -20;
+    }
+}
+
+@keyframes nodeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(45deg) scale(0.7);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 }

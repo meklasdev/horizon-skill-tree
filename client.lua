@@ -1,5 +1,96 @@
 local isMenuOpen = false
 local isDataLoading = false
+local menuCam = nil
+local menuIntroCam = nil
+
+local HAND_BONES = {
+    left = 18905,
+    right = 57005
+}
+
+local function destroyMenuCams()
+    if menuCam and DoesCamExist(menuCam) then
+        DestroyCam(menuCam, false)
+    end
+
+    if menuIntroCam and DoesCamExist(menuIntroCam) then
+        DestroyCam(menuIntroCam, false)
+    end
+
+    menuCam = nil
+    menuIntroCam = nil
+end
+
+local function stopMenuCamera()
+    RenderScriptCams(false, true, 500, true, true)
+    destroyMenuCams()
+end
+
+local function startMenuCamera()
+    local ped = PlayerPedId()
+    if not DoesEntityExist(ped) then
+        return
+    end
+
+    destroyMenuCams()
+
+    local gameplayCamCoords = GetGameplayCamCoord()
+    local gameplayCamRot = GetGameplayCamRot(2)
+
+    menuIntroCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    SetCamCoord(menuIntroCam, gameplayCamCoords.x, gameplayCamCoords.y, gameplayCamCoords.z)
+    SetCamRot(menuIntroCam, gameplayCamRot.x, gameplayCamRot.y, gameplayCamRot.z, 2)
+    SetCamFov(menuIntroCam, GetGameplayCamFov())
+    SetCamActive(menuIntroCam, true)
+    RenderScriptCams(true, true, 0, true, true)
+
+    local camCoords = GetOffsetFromEntityInWorldCoords(ped, 0.0, 2.0, 0.75)
+    local lookAtCoords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
+
+    menuCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    SetCamCoord(menuCam, camCoords.x, camCoords.y, camCoords.z)
+    PointCamAtCoord(menuCam, lookAtCoords.x, lookAtCoords.y, lookAtCoords.z + 0.02)
+    SetCamFov(menuCam, 45.0)
+    SetCamActive(menuCam, true)
+    SetCamActiveWithInterp(menuCam, menuIntroCam, 900, true, true)
+
+    CreateThread(function()
+        Wait(1100)
+        if menuIntroCam and DoesCamExist(menuIntroCam) then
+            DestroyCam(menuIntroCam, false)
+            menuIntroCam = nil
+        end
+    end)
+end
+
+local function sendHandAnchors()
+    local ped = PlayerPedId()
+    if not DoesEntityExist(ped) then
+        return
+    end
+
+    local leftCoords = GetPedBoneCoords(ped, HAND_BONES.left, 0.0, 0.0, 0.0)
+    local rightCoords = GetPedBoneCoords(ped, HAND_BONES.right, 0.0, 0.0, 0.0)
+
+    local leftVisible, leftX, leftY = GetScreenCoordFromWorldCoord(leftCoords.x, leftCoords.y, leftCoords.z)
+    local rightVisible, rightX, rightY = GetScreenCoordFromWorldCoord(rightCoords.x, rightCoords.y, rightCoords.z)
+
+    SendNUIMessage({
+        action = 'setAnchors',
+        anchors = {
+            left = {
+                x = leftX,
+                y = leftY,
+                visible = leftVisible
+            },
+            right = {
+                x = rightX,
+                y = rightY,
+                visible = rightVisible
+            }
+        }
+    })
+end
 
 local function getSyncCombatEventName()
     return (Config.Triggers and Config.Triggers.SyncCombatServer) or 'horizon_skill_tree:server:syncCombat'
@@ -7,6 +98,13 @@ end
 
 local function setMenuState(state)
     isMenuOpen = state
+    if state then
+        startMenuCamera()
+        sendHandAnchors()
+    else
+        stopMenuCamera()
+    end
+
     SetNuiFocus(state, state)
     SendNUIMessage({
         action = state and 'open' or 'close'
@@ -131,6 +229,17 @@ end)
 AddEventHandler('playerSpawned', function()
     if Config.Combat and Config.Combat.Enabled and Config.Combat.ReapplyOnSpawn then
         TriggerServerEvent(getSyncCombatEventName())
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if isMenuOpen then
+            sendHandAnchors()
+            Wait(120)
+        else
+            Wait(400)
+        end
     end
 end)
 
