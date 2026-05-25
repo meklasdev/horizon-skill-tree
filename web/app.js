@@ -12,6 +12,10 @@ let player = { skillPoints: 0, skills: {} };
 let activeCategory = null;
 let renderedPositions = {};
 let categoryNodes = {};
+let handAnchors = {
+    left: { x: 0, y: 0, visible: false },
+    right: { x: 0, y: 0, visible: false }
+};
 
 const CATEGORY_TITLES = {
     combat: 'Bijatyka',
@@ -123,24 +127,71 @@ const createLine = (x1, y1, x2, y2, extraClass = '') => {
     return line;
 };
 
+const parseAnchor = (anchor) => ({
+    x: clamp(Number(anchor?.x) || 0, 0, 1),
+    y: clamp(Number(anchor?.y) || 0, 0, 1),
+    visible: Boolean(anchor?.visible)
+});
+
+const getActiveLinkTarget = () => {
+    if (activeCategory) {
+        const selectedCategory = getCategoryEntries().find((entry) => entry.id === activeCategory);
+        if (selectedCategory) {
+            const rootSkill = getCategoryRootSkill(selectedCategory);
+            const rootPosition = renderedPositions[rootSkill.id] || getSkillPosition(rootSkill);
+            return { x: rootPosition.x, y: rootPosition.y };
+        }
+    }
+
+    const categoryPoints = Object.values(categoryNodes);
+    if (categoryPoints.length > 0) {
+        return categoryPoints[0];
+    }
+
+    return null;
+};
+
+const drawHandLink = (frameRect) => {
+    const anchor = handAnchors.left;
+    if (!anchor?.visible) return;
+
+    const target = getActiveLinkTarget();
+    if (!target) return;
+
+    const anchorX = clamp((anchor.x * window.innerWidth) - frameRect.left, 0, frameRect.width);
+    const anchorY = clamp((anchor.y * window.innerHeight) - frameRect.top, 0, frameRect.height);
+
+    linesRoot.appendChild(createLine(
+        anchorX,
+        anchorY,
+        target.x * frameRect.width,
+        target.y * frameRect.height,
+        'hand-link'
+    ));
+};
+
 const drawConnections = () => {
     linesRoot.innerHTML = '';
 
     const frameRect = nodesRoot.getBoundingClientRect();
-    if (!frameRect.width || !frameRect.height || !activeCategory) return;
+    if (!frameRect.width || !frameRect.height) return;
 
-    Object.values(renderedPositions).forEach((nodePosition) => {
-        if (!nodePosition.requirement || !renderedPositions[nodePosition.requirement]) return;
+    if (activeCategory) {
+        Object.values(renderedPositions).forEach((nodePosition) => {
+            if (!nodePosition.requirement || !renderedPositions[nodePosition.requirement]) return;
 
-        const parent = renderedPositions[nodePosition.requirement];
-        linesRoot.appendChild(createLine(
-            parent.x * frameRect.width,
-            parent.y * frameRect.height,
-            nodePosition.x * frameRect.width,
-            nodePosition.y * frameRect.height,
-            isUnlocked(nodePosition.id) ? 'active' : ''
-        ));
-    });
+            const parent = renderedPositions[nodePosition.requirement];
+            linesRoot.appendChild(createLine(
+                parent.x * frameRect.width,
+                parent.y * frameRect.height,
+                nodePosition.x * frameRect.width,
+                nodePosition.y * frameRect.height,
+                isUnlocked(nodePosition.id) ? 'active' : ''
+            ));
+        });
+    }
+
+    drawHandLink(frameRect);
 };
 
 const createNode = (label, x, y, color, extraClass, delayStep = 0) => {
@@ -272,6 +323,9 @@ window.addEventListener('message', ({ data }) => {
 
     if (data.action === 'close') {
         app.classList.add('hidden');
+        handAnchors.left.visible = false;
+        handAnchors.right.visible = false;
+        drawConnections();
         return;
     }
 
@@ -290,6 +344,9 @@ window.addEventListener('message', ({ data }) => {
     }
 
     if (data.action === 'setAnchors') {
+        handAnchors.left = parseAnchor(data.anchors?.left);
+        handAnchors.right = parseAnchor(data.anchors?.right);
+        drawConnections();
         return;
     }
 });
