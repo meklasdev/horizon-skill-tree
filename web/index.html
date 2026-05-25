@@ -8,9 +8,19 @@
 </head>
 <body>
     <main id="app" class="hidden">
-        <div class="hud-top-left" id="pointsCounter">0 point</div>
+        <div class="hud-top-left" id="pointsCounter">0 pkt</div>
 
         <section class="skill-tree-frame">
+            <div class="frame-glow" aria-hidden="true"></div>
+            <div class="character-focus" aria-hidden="true">
+                <span class="character-head"></span>
+                <span class="character-core"></span>
+                <span class="character-arm character-arm-left"></span>
+                <span class="character-arm character-arm-right"></span>
+                <span class="character-leg character-leg-left"></span>
+                <span class="character-leg character-leg-right"></span>
+            </div>
+            <button id="treeBackButton" class="tree-back-button hidden" type="button">← Kategorie</button>
             <svg id="connections" class="connections"></svg>
             <div id="nodes" class="nodes"></div>
         </section>
@@ -18,6 +28,11 @@
         <aside class="details-panel">
             <h2 id="skillName">Wybierz umiejętność</h2>
             <p id="skillDescription">Kliknij węzeł, aby sprawdzić wymagania i koszt.</p>
+            <div id="skillMeta" class="skill-meta">
+                <span>Koszt: —</span>
+                <span>Wymagania: —</span>
+                <span>Status: —</span>
+            </div>
         </aside>
 
         <div class="hud-bottom-right">

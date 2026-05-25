@@ -1,8 +1,9 @@
 :root {
-    --bg: rgba(5, 8, 14, 0.52);
-    --panel: rgba(10, 14, 24, 0.9);
+    --bg: rgba(4, 7, 12, 0.38);
+    --panel: rgba(9, 13, 22, 0.86);
     --text: #e6ecff;
     --muted: #9aa6c4;
+    --panel-edge: rgba(125, 145, 189, 0.16);
 }
 
 * {
@@ -26,8 +27,10 @@ body {
     height: 100%;
     display: grid;
     grid-template-columns: 1fr 350px;
-    background: radial-gradient(circle at center, rgba(33, 45, 78, 0.25), var(--bg));
-    backdrop-filter: blur(8px);
+    background:
+        radial-gradient(circle at center, rgba(40, 60, 112, 0.18), transparent 34%),
+        linear-gradient(180deg, rgba(3, 5, 10, 0.26), var(--bg));
+    backdrop-filter: blur(5px);
 }
 
 .hidden {
@@ -39,12 +42,13 @@ body {
     top: 24px;
     left: 24px;
     z-index: 5;
-    background: rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(4, 8, 16, 0.68);
+    border: 1px solid var(--panel-edge);
     border-radius: 12px;
     padding: 10px 14px;
     font-weight: 600;
     letter-spacing: 0.4px;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
 }
 
 .hud-bottom-right {
@@ -61,10 +65,111 @@ body {
 .skill-tree-frame {
     position: relative;
     margin: 80px 20px 40px 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 20px;
-    background: rgba(7, 10, 16, 0.65);
+    background:
+        radial-gradient(circle at center, rgba(97, 128, 209, 0.1), rgba(8, 11, 18, 0.08) 26%, rgba(7, 10, 16, 0.74) 74%),
+        linear-gradient(180deg, rgba(9, 12, 20, 0.72), rgba(6, 8, 14, 0.84));
     overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.frame-glow {
+    position: absolute;
+    inset: 12% 24% 10%;
+    border-radius: 42%;
+    border: 1px solid rgba(115, 150, 255, 0.12);
+    background:
+        radial-gradient(circle at center, rgba(83, 121, 255, 0.12), rgba(83, 121, 255, 0.04) 40%, transparent 68%);
+    filter: blur(4px);
+    pointer-events: none;
+}
+
+.character-focus {
+    position: absolute;
+    left: 50%;
+    top: 51%;
+    width: min(22vw, 300px);
+    aspect-ratio: 0.64;
+    transform: translate(-50%, -50%);
+    opacity: 0.78;
+    pointer-events: none;
+}
+
+.character-focus span {
+    position: absolute;
+    display: block;
+    border: 1px solid rgba(123, 151, 222, 0.16);
+    background: linear-gradient(180deg, rgba(64, 95, 173, 0.12), rgba(64, 95, 173, 0.03));
+    box-shadow: inset 0 0 28px rgba(84, 121, 205, 0.08);
+}
+
+.character-head {
+    top: 0;
+    left: 50%;
+    width: 18%;
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+    border-radius: 50%;
+}
+
+.character-core {
+    top: 16%;
+    left: 50%;
+    width: 31%;
+    height: 42%;
+    transform: translateX(-50%);
+    border-radius: 40% 40% 24% 24%;
+}
+
+.character-arm {
+    top: 23%;
+    width: 16%;
+    height: 30%;
+    border-radius: 999px;
+}
+
+.character-arm-left {
+    left: 19%;
+    transform: rotate(18deg);
+}
+
+.character-arm-right {
+    right: 19%;
+    transform: rotate(-18deg);
+}
+
+.character-leg {
+    top: 52%;
+    width: 16%;
+    height: 36%;
+    border-radius: 999px;
+}
+
+.character-leg-left {
+    left: 34%;
+    transform: rotate(6deg);
+}
+
+.character-leg-right {
+    right: 34%;
+    transform: rotate(-6deg);
+}
+
+.tree-back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 3;
+    border: 1px solid rgba(122, 149, 222, 0.24);
+    border-radius: 999px;
+    background: rgba(9, 14, 26, 0.82);
+    color: var(--text);
+    padding: 8px 14px;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
 }
 
 .nodes,
@@ -77,10 +182,12 @@ body {
 
 .details-panel {
     margin: 80px 24px 40px 0;
-    padding: 20px;
+    padding: 24px;
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    background:
+        linear-gradient(180deg, rgba(14, 20, 34, 0.96), rgba(8, 12, 21, 0.84));
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
 }
 
 .details-panel h2 {
@@ -89,19 +196,34 @@ body {
 }
 
 .details-panel p {
-    margin: 0;
+    margin: 0 0 20px;
     color: var(--muted);
     line-height: 1.5;
 }
 
+.skill-meta {
+    display: grid;
+    gap: 10px;
+}
+
+.skill-meta span {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 13px;
+    color: var(--text);
+}
+
 .skill-node {
     position: absolute;
-    width: 72px;
-    height: 72px;
+    width: 78px;
+    height: 78px;
     transform: translate(-50%, -50%) rotate(45deg);
     border: 2px solid #4a5573;
-    border-radius: 10px;
-    background: linear-gradient(145deg, rgba(20, 28, 42, 0.95), rgba(8, 12, 22, 0.95));
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(20, 28, 42, 0.97), rgba(8, 12, 22, 0.96));
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
     cursor: pointer;
     transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
@@ -114,25 +236,40 @@ body {
     content: attr(data-label);
     position: absolute;
     left: 50%;
-    top: calc(100% + 14px);
+    top: calc(100% + 16px);
     transform: translateX(-50%) rotate(-45deg);
     white-space: nowrap;
-    font-size: 11px;
-    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    color: #d6def7;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
 }
 
 .skill-node .diamond-content {
     transform: rotate(-45deg);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
-    font-size: 10px;
+    font-size: 12px;
     text-align: center;
-    padding: 8px;
+    padding: 10px;
     color: #f3f6ff;
     letter-spacing: 0.3px;
+}
+
+.skill-node .node-state {
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    opacity: 0.7;
+}
+
+.skill-node .node-value {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .skill-node.unlocked {
@@ -142,17 +279,23 @@ body {
 
 .skill-node.available {
     border-color: var(--node-color);
+    box-shadow: 0 0 18px rgba(89, 244, 255, 0.08);
+}
+
+.skill-node.locked {
+    opacity: 0.88;
 }
 
 .skill-node.category-node {
-    width: 80px;
-    height: 80px;
+    width: 94px;
+    height: 94px;
     border-radius: 14px;
     background: linear-gradient(145deg, rgba(20, 28, 42, 0.96), rgba(9, 13, 24, 0.98));
 }
 
 .skill-node.category-node .diamond-content {
-    font-size: 9px;
+    gap: 4px;
+    font-size: 10px;
     font-weight: 700;
 }
 
@@ -166,8 +309,8 @@ body {
 }
 
 .connection {
-    stroke: rgba(145, 156, 187, 0.28);
-    stroke-width: 3;
+    stroke: rgba(145, 156, 187, 0.3);
+    stroke-width: 2.5;
 }
 
 .connection.active {
@@ -181,6 +324,21 @@ body {
     stroke-width: 2.5;
     stroke-dasharray: 6 6;
     animation: flow 1.5s linear infinite;
+}
+
+@media (max-width: 1200px) {
+    #app {
+        grid-template-columns: 1fr 300px;
+    }
+
+    .character-focus {
+        width: min(28vw, 240px);
+    }
+
+    .skill-node {
+        width: 70px;
+        height: 70px;
+    }
 }
 
 @keyframes flow {
