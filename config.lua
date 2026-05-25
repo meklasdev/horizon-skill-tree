@@ -39,6 +39,12 @@ Config.Combat = {
     ReapplyOnSpawn = true
 }
 
+-- Publiczne eventy net (klient -> serwer). Trzymaj wyłączone jeśli nie są wymagane.
+Config.Security = {
+    AllowClientAddXPEvent = false,
+    AllowClientSkillPointEvents = false
+}
+
 -- Ustawienia progresji
 Config.Leveling = {
     BaseXP = 100,
@@ -57,7 +63,13 @@ Config.Skills = {
         x = 18,
         y = 60,
         color = '#9d4edd',
-        category = 'gathering'
+        category = 'gathering',
+        effects = {
+            fishing = {
+                rareChanceMultiplier = 1.10,
+                xpMultiplier = 1.05
+            }
+        }
     },
     fishing_2 = {
         id = 'fishing_2',
@@ -68,7 +80,13 @@ Config.Skills = {
         x = 35,
         y = 45,
         color = '#9d4edd',
-        category = 'gathering'
+        category = 'gathering',
+        effects = {
+            fishing = {
+                rareChanceMultiplier = 1.20,
+                xpMultiplier = 1.10
+            }
+        }
     },
     combat_1 = {
         id = 'combat_1',
@@ -155,5 +173,37 @@ Config.Skills = {
         y = 18,
         color = '#ffbe0b',
         category = 'medical'
+    }
+}
+
+-- Integracje zewnętrzne (np. 0r-fishing v2 przez bridge serverowy)
+Config.Integrations = Config.Integrations or {}
+Config.Integrations.Fishing = {
+    Enabled = true,
+    Events = {
+        CatchReportedServer = 'horizon_skill_tree:integration:fishing:catchReported'
+    },
+    XP = {
+        BasePerCatch = 10,
+        RarityBonus = {
+            common = 0,
+            uncommon = 3,
+            rare = 8,
+            epic = 15,
+            legendary = 30
+        },
+        MaxPerCatch = 250
+    },
+    Security = {
+        AllowedBridgeResources = { '0r-fishing', '0r-fishing-bridge' },
+        RequireKnownRarity = true
+    },
+    Defaults = {
+        xpMultiplier = 1.0,
+        rareChanceMultiplier = 1.0
+    },
+    Limits = {
+        MaxXPMultiplier = 3.0,
+        MaxRareChanceMultiplier = 2.0
     }
 }

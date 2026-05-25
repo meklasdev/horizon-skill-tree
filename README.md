@@ -29,6 +29,21 @@ Każdy skill w `Config.Skills` może mieć dodatkowo:
 - `effects` (np. `effects.combat.weaponDamage`, `effects.combat.meleeDamage`)
 - `triggers` (`server`, `client`) odpalane po odblokowaniu konkretnego skilla.
 
+## Integracja Fishing (0r-fishing v2 przez bridge)
+- Skrypt nie zakłada sztywnych eventów 0r-fishing — używa konfigurowalnego bridge eventu:
+  - `Config.Integrations.Fishing.Events.CatchReportedServer`
+  - domyślnie: `horizon_skill_tree:integration:fishing:catchReported`
+- Bridge powinien działać po stronie serwera i po złowieniu ryby wywołać:
+  - `TriggerEvent('horizon_skill_tree:integration:fishing:catchReported', src, { rarity = 'rare', fish = 'salmon' })`
+- Autoryzacja bridge zasobu odbywa się przez whitelistę:
+  - `Config.Integrations.Fishing.Security.AllowedBridgeResources`
+- Dostępne eksporty dla innych skryptów:
+  - `exports['horizon-skill-tree']:GetFishingModifiers(source)` → `{ xpMultiplier, rareChanceMultiplier }`
+  - `exports['horizon-skill-tree']:GetFishingXPForCatch(source, catchData)` → liczba XP za pojedynczy połów
+  - `exports['horizon-skill-tree']:AwardFishingXP(source, catchData)` → nalicza XP i zapisuje progres
+- `catchData.rarity` powinno odpowiadać kluczom z `Config.Integrations.Fishing.XP.RarityBonus`.
+- Publiczne net eventy `addXP/addSkillPoints` są domyślnie zablokowane i można je świadomie odblokować przez `Config.Security`.
+
 ## Domyślne sterowanie
 - Komenda: `/skills`
 - Klawisz: `K` (RegisterKeyMapping)
