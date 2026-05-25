@@ -23,6 +23,14 @@ Fivem script ESX - skill tree z NUI.
   - `Enabled` - włącza natywne modyfikatory walki.
   - `MaxWeaponBonus` / `MaxMeleeBonus` - limity anti-OP.
   - `ReapplyOnSpawn` - ponowna synchronizacja po respawnie.
+- `Config.Native`:
+  - `Movement.MaxSprintBonus` - limit bonusu sprintu z drzewka.
+  - `Driving.MaxDamageReduction` - limit redukcji obrażeń pojazdu.
+- `Config.ActivityXP`:
+  - automatyczny XP za granie + bonus za bieganie i jazdę.
+  - posiada prosty filtr AFK (`MinDistance`, `MaxIdleIntervals`).
+- `Config.Admin`:
+  - jedna komenda administracyjna ESX do zarządzania postępem.
 
 ## Jak rozszerzyć skilla o zależności i efekty
 Każdy skill w `Config.Skills` może mieć dodatkowo:
@@ -43,6 +51,14 @@ Każdy skill w `Config.Skills` może mieć dodatkowo:
   - `exports['horizon-skill-tree']:AwardFishingXP(source, catchData)` → nalicza XP i zapisuje progres
 - `catchData.rarity` powinno odpowiadać kluczom z `Config.Integrations.Fishing.XP.RarityBonus`.
 - Publiczne net eventy `addXP/addSkillPoints` są domyślnie zablokowane i można je świadomie odblokować przez `Config.Security`.
+
+## Komenda admina (ESX)
+- Domyślnie: `/skilladmin`
+- Składnia:
+  - `/skilladmin <id|me> addxp <amount>`
+  - `/skilladmin <id|me> addsp <amount>`
+  - `/skilladmin <id|me> reset`
+- Uprawnienia grup ustawiasz w `Config.Admin.AllowedGroups`.
 
 ## Domyślne sterowanie
 - Komenda: `/skills`

@@ -204,20 +204,35 @@ RegisterNUICallback('purchaseSkill', function(data, cb)
 end)
 
 RegisterNetEvent('horizon_skill_tree:client:applyCombat', function(mods)
-    if not Config.Combat or not Config.Combat.Enabled then
+    if Config.Combat and Config.Combat.Enabled then
+        local weaponBonus = (mods and tonumber(mods.weapon)) or 0.0
+        local meleeBonus = (mods and tonumber(mods.melee)) or 0.0
+
+        local weaponModifier = 1.0 + math.max(0.0, weaponBonus)
+        local meleeModifier = 1.0 + math.max(0.0, meleeBonus)
+
+        SetPlayerWeaponDamageModifier(PlayerId(), weaponModifier)
+        SetPlayerMeleeWeaponDamageModifier(PlayerId(), meleeModifier)
+    else
         SetPlayerWeaponDamageModifier(PlayerId(), 1.0)
         SetPlayerMeleeWeaponDamageModifier(PlayerId(), 1.0)
-        return
     end
 
-    local weaponBonus = (mods and tonumber(mods.weapon)) or 0.0
-    local meleeBonus = (mods and tonumber(mods.melee)) or 0.0
+    if Config.Native and Config.Native.Movement and Config.Native.Movement.Enabled then
+        local sprintBonus = (mods and tonumber(mods.sprintBonus)) or 0.0
+        local sprintModifier = math.min(1.0 + math.max(0.0, sprintBonus), 1.49)
+        SetRunSprintMultiplierForPlayer(PlayerId(), sprintModifier)
+    else
+        SetRunSprintMultiplierForPlayer(PlayerId(), 1.0)
+    end
 
-    local weaponModifier = 1.0 + math.max(0.0, weaponBonus)
-    local meleeModifier = 1.0 + math.max(0.0, meleeBonus)
-
-    SetPlayerWeaponDamageModifier(PlayerId(), weaponModifier)
-    SetPlayerMeleeWeaponDamageModifier(PlayerId(), meleeModifier)
+    if Config.Native and Config.Native.Driving and Config.Native.Driving.Enabled then
+        local damageReduction = (mods and tonumber(mods.vehicleDamageReduction)) or 0.0
+        local damageModifier = math.max(0.25, 1.0 - math.max(0.0, damageReduction))
+        SetPlayerVehicleDamageModifier(PlayerId(), damageModifier)
+    else
+        SetPlayerVehicleDamageModifier(PlayerId(), 1.0)
+    end
 end)
 
 RegisterNetEvent('horizon_skill_tree:client:requestCombatSync', function()

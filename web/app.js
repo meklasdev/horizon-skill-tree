@@ -17,6 +17,8 @@ let anchors = {
 
 const CATEGORY_TITLES = {
     combat: 'Bijatyka',
+    movement: 'Atletyka',
+    driving: 'Jazda',
     gathering: 'Zbieractwo',
     crafting: 'Rzemiosło',
     medical: 'Medycyna',
@@ -25,6 +27,8 @@ const CATEGORY_TITLES = {
 
 const CATEGORY_HAND = {
     combat: 'right',
+    movement: 'right',
+    driving: 'left',
     gathering: 'left',
     crafting: 'left',
     medical: 'right',
