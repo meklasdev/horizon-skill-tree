@@ -13,6 +13,22 @@ Fivem script ESX - skill tree z NUI.
 - `client.lua` - otwieranie/zamykanie NUI, blokada sterowania i obsługa callbacków.
 - `web/*` - interfejs NUI.
 
+## Nowe opcje konfiguracji
+- `Config.Triggers`:
+  - `OpenMenuClient` - event do otwierania/zamykania menu skilli.
+  - `SyncCombatServer` - event żądania serwerowej synchronizacji bonusów walki.
+  - `OnSkillUnlockServer` / `OnSkillUnlockClient` - globalne triggery po odblokowaniu skilla.
+  - `OnLevelUpServer` - trigger po awansie poziomu.
+- `Config.Combat`:
+  - `Enabled` - włącza natywne modyfikatory walki.
+  - `MaxWeaponBonus` / `MaxMeleeBonus` - limity anti-OP.
+  - `ReapplyOnSpawn` - ponowna synchronizacja po respawnie.
+
+## Jak rozszerzyć skilla o zależności i efekty
+Każdy skill w `Config.Skills` może mieć dodatkowo:
+- `effects` (np. `effects.combat.weaponDamage`, `effects.combat.meleeDamage`)
+- `triggers` (`server`, `client`) odpalane po odblokowaniu konkretnego skilla.
+
 ## Domyślne sterowanie
 - Komenda: `/skills`
 - Klawisz: `K` (RegisterKeyMapping)
