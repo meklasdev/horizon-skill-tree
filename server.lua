@@ -201,6 +201,131 @@ local function buildCombatModifiers(skills)
     return weaponBonus, meleeBonus
 end
 
+local function getFishingIntegrationConfig()
+    return Config.Integrations and Config.Integrations.Fishing or nil
+end
+
+local function buildFishingModifiers(skills)
+    local integration = getFishingIntegrationConfig()
+    local defaults = integration and integration.Defaults or {}
+    local limits = integration and integration.Limits or {}
+
+    local xpMultiplier = tonumber(defaults.xpMultiplier) or 1.0
+    local rareChanceMultiplier = tonumber(defaults.rareChanceMultiplier) or 1.0
+
+    if type(skills) ~= 'table' then
+        return {
+            xpMultiplier = math.max(0.0, xpMultiplier),
+            rareChanceMultiplier = math.max(0.0, rareChanceMultiplier)
+        }
+    end
+
+    for skillId, unlocked in pairs(skills) do
+        if unlocked and Config.Skills[skillId] then
+            local fishing = Config.Skills[skillId].effects and Config.Skills[skillId].effects.fishing
+            if fishing then
+                local xpMod = tonumber(fishing.xpMultiplier)
+                local rareMod = tonumber(fishing.rareChanceMultiplier)
+
+                if xpMod and xpMod > 0 then
+                    xpMultiplier = xpMultiplier * xpMod
+                end
+                if rareMod and rareMod > 0 then
+                    rareChanceMultiplier = rareChanceMultiplier * rareMod
+                end
+            end
+        end
+    end
+
+    local maxXP = tonumber(limits.MaxXPMultiplier)
+    if maxXP then
+        xpMultiplier = math.min(xpMultiplier, maxXP)
+    end
+
+    local maxRare = tonumber(limits.MaxRareChanceMultiplier)
+    if maxRare then
+        rareChanceMultiplier = math.min(rareChanceMultiplier, maxRare)
+    end
+
+    return {
+        xpMultiplier = math.max(0.0, xpMultiplier),
+        rareChanceMultiplier = math.max(0.0, rareChanceMultiplier)
+    }
+end
+
+local function getFishingModifiers(source)
+    local data = PlayerDataCache[source] or getOrCreatePlayerData(source)
+    if not data then
+        return buildFishingModifiers(nil)
+    end
+
+    return buildFishingModifiers(data.skills)
+end
+
+local function calculateFishingXP(source, catchData)
+    local integration = getFishingIntegrationConfig()
+    if not integration or not integration.Enabled then
+        return 0
+    end
+
+    catchData = type(catchData) == 'table' and catchData or {}
+    local xpConfig = integration.XP or {}
+    local rarityBonusMap = xpConfig.RarityBonus or {}
+    local security = integration.Security or {}
+
+    local baseXP = tonumber(xpConfig.BasePerCatch) or 0
+    local rarity = tostring(catchData.rarity or ''):lower()
+    local rarityBonus = 0
+    local hasKnownRarity = rarity ~= '' and rarityBonusMap[rarity] ~= nil
+
+    if security.RequireKnownRarity and not hasKnownRarity then
+        return 0
+    end
+
+    if hasKnownRarity then
+        rarityBonus = tonumber(rarityBonusMap[rarity]) or 0
+    end
+
+    local modifiers = getFishingModifiers(source)
+    local totalXP = (baseXP + rarityBonus) * ((modifiers and modifiers.xpMultiplier) or 1.0)
+
+    local maxPerCatch = tonumber(xpConfig.MaxPerCatch)
+    if maxPerCatch then
+        totalXP = math.min(totalXP, maxPerCatch)
+    end
+
+    return math.max(0, math.floor(totalXP))
+end
+
+local function awardFishingXP(source, catchData)
+    local xp = calculateFishingXP(source, catchData)
+    if xp <= 0 then
+        return false, 0
+    end
+
+    return addXP(source, xp), xp
+end
+
+local function isAllowedBridgeResource(resourceName)
+    local integration = getFishingIntegrationConfig()
+    local allowed = integration and integration.Security and integration.Security.AllowedBridgeResources
+    if type(allowed) ~= 'table' or #allowed == 0 then
+        return false
+    end
+
+    if type(resourceName) ~= 'string' or resourceName == '' then
+        return false
+    end
+
+    for _, allowedName in ipairs(allowed) do
+        if allowedName == resourceName then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function tryPurchaseSkill(source, skillId)
     local skill = Config.Skills[skillId]
     if not skill then
@@ -269,14 +394,26 @@ RegisterNetEvent('horizon_skill_tree:server:purchaseSkill', function(skillId)
 end)
 
 RegisterNetEvent('horizon_skill_tree:server:addXP', function(amount)
+    if not Config.Security or Config.Security.AllowClientAddXPEvent ~= true then
+        return
+    end
+
     addXP(source, amount)
 end)
 
 RegisterNetEvent('horizon_skill_tree:server:addSkillPoints', function(amount)
+    if not Config.Security or Config.Security.AllowClientSkillPointEvents ~= true then
+        return
+    end
+
     addSkillPoints(source, amount)
 end)
 
 RegisterNetEvent('horizon_skill_tree:server:removeSkillPoints', function(amount)
+    if not Config.Security or Config.Security.AllowClientSkillPointEvents ~= true then
+        return
+    end
+
     addSkillPoints(source, -(tonumber(amount) or 0))
 end)
 
@@ -289,6 +426,9 @@ exports('RemoveSkillPoints', function(source, amount)
     return addSkillPoints(source, -(tonumber(amount) or 0))
 end)
 exports('HasSkill', hasSkill)
+exports('GetFishingModifiers', getFishingModifiers)
+exports('GetFishingXPForCatch', calculateFishingXP)
+exports('AwardFishingXP', awardFishingXP)
 
 RegisterNetEvent((Config.Triggers and Config.Triggers.SyncCombatServer) or 'horizon_skill_tree:server:syncCombat', function()
     local source = source
@@ -304,6 +444,27 @@ RegisterNetEvent((Config.Triggers and Config.Triggers.SyncCombatServer) or 'hori
         melee = meleeBonus
     })
 end)
+
+local fishingIntegrationEvent = getFishingIntegrationConfig()
+fishingIntegrationEvent = fishingIntegrationEvent and fishingIntegrationEvent.Events and fishingIntegrationEvent.Events.CatchReportedServer
+
+if type(fishingIntegrationEvent) == 'string' and fishingIntegrationEvent ~= '' then
+    AddEventHandler(fishingIntegrationEvent, function(targetSource, catchData)
+        local invokingResource = GetInvokingResource()
+        if not isAllowedBridgeResource(invokingResource) then
+            print(('[horizon-skill-tree] Zablokowano fishing bridge z nieautoryzowanego zasobu: %s')
+                :format(invokingResource or 'unknown'))
+            return
+        end
+
+        local source = tonumber(targetSource)
+        if not source then
+            return
+        end
+
+        awardFishingXP(source, catchData)
+    end)
+end
 
 AddEventHandler('playerDropped', function()
     local source = source
